@@ -2,6 +2,22 @@ import Report from '../models/Report.js';
 import { analyzeImage } from '../services/ai.service.js';
 import { storeImage } from '../services/storage.service.js';
 
+function normalizeAiResult(ai) {
+  if (!ai || typeof ai !== 'object') return { available: false, detected: false, detections: [] };
+  const detections = Array.isArray(ai.detections) ? ai.detections.filter(item => item && typeof item === 'object').map(item => ({
+    class: String(item.class ?? 'unknown').slice(0, 80),
+    confidence: Number.isFinite(Number(item.confidence)) ? Math.min(1, Math.max(0, Number(item.confidence))) : undefined,
+    box: Array.isArray(item.box) ? item.box.slice(0, 4).map(Number).filter(Number.isFinite) : undefined
+  })) : [];
+  const confidence = Number.isFinite(Number(ai.confidence)) ? Math.min(1, Math.max(0, Number(ai.confidence))) : undefined;
+  return {
+    available: Boolean(ai.available),
+    detected: Boolean(ai.detected && detections.length),
+    confidence,
+    detections
+  };
+}
+
 export async function listReports(req, res, next) {
   try {
     const reports = await Report.find().sort({ createdAt: -1 }).populate('reporter', 'name');
@@ -20,7 +36,8 @@ export async function getReport(req, res, next) {
 export async function createReport(req, res, next) {
   try {
     const { lat, lng, address, description } = req.validatedReport;
-    const [ai, imageUrl] = await Promise.all([analyzeImage(req.file), storeImage(req.file)]);
+    const [aiResult, imageUrl] = await Promise.all([analyzeImage(req.file), storeImage(req.file)]);
+    const ai = normalizeAiResult(aiResult);
     const report = await Report.create({ reporter: req.user.id, imageUrl, location: { lat, lng, address }, description, ai });
     res.status(201).json(report);
   } catch (err) { next(err); }
