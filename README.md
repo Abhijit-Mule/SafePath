@@ -28,17 +28,32 @@ Python AI Service -----> YOLO model
 - User registration and login
 - JWT-protected report creation
 - Pothole image upload
-- GPS coordinates and map location
+- GPS coordinates and interactive Leaflet map
+- Status filtering: reported / verified / resolved
+- Public report history and image viewing
+- Authority dashboard with live statistics
+- Authority-only report status management
 - AI detection through a separate inference service
-- Report history and public report feed
-- Basic authority dashboard statistics
 - CORS and request validation
+
+## Authority workflow
+
+New accounts are created with the `user` role. Public registration cannot create an authority account. To create an authority for the academic/demo environment, promote the account directly in MongoDB:
+
+```js
+db.users.updateOne(
+  { email: "authority@example.com" },
+  { $set: { role: "authority" } }
+)
+```
+
+After promotion, sign out and sign in again so the new JWT contains the authority role. Authority users can move reports between `reported`, `verified`, and `resolved`.
 
 ## Project structure
 
 ```text
 SafePath/
-├── client/       # React frontend
+├── client/       # React frontend + Leaflet map
 ├── server/       # Node/Express REST API
 └── ai-service/   # Python/FastAPI inference service
 ```
@@ -89,7 +104,12 @@ See each `.env.example` file. Never commit real credentials, JWT secrets, MongoD
 - `GET /api/reports`
 - `POST /api/reports` (JWT + image)
 - `GET /api/reports/:id`
-- `GET /api/dashboard/stats`
+- `GET /api/reports/dashboard/stats` (authority JWT)
+- `PATCH /api/reports/:id/status` (authority JWT)
+
+## Production note
+
+The current upload implementation stores images on the API filesystem. Before production deployment on ephemeral/serverless infrastructure, move image storage to durable object storage such as S3-compatible storage or Cloudinary and keep only the public asset URL in MongoDB.
 
 ## Academic note
 
