@@ -23,7 +23,7 @@ Node/Express API ------> MongoDB Atlas
      +-----------------> S3-compatible object storage
      |
      v
-Python AI Service -----> trained YOLO pothole model
+Python AI Service -----> pothole YOLO model
 ```
 
 ## Features
@@ -34,11 +34,21 @@ Python AI Service -----> trained YOLO pothole model
 - GPS coordinate and address validation
 - Production object storage for uploaded images
 - Real YOLO pothole inference through a separate service
-- Configurable confidence threshold and pothole class names
+- Configurable confidence threshold and pothole class filtering
 - Public report feed and interactive map
 - Authority-only dashboard statistics and status updates
 - Report lifecycle: `reported` → `verified` → `resolved`
-- Automated client, API, and AI CI checks
+- Automated client, API, MongoDB, and AI CI checks
+
+## AI model
+
+The default model is **`peterhdd/pothole-detection-yolov8`**, a YOLOv8s pothole detector published under the Apache-2.0 license. SafePath does not claim that this third-party model was trained by the project.
+
+If `MODEL_PATH` does not exist, the AI service downloads the model from `MODEL_URL` on first inference. For production reproducibility, it is recommended to pre-download the model during the container/image build and set `MODEL_PATH` to that local file. You can also set `MODEL_SHA256` to verify the exact model file before loading it.
+
+The service accepts `POTHOLE_CLASSES` as a comma-separated case-insensitive class allow-list. The default is `pothole,potholes`.
+
+Model performance must be measured on the project's actual labeled dataset before publishing accuracy, precision, recall, mAP, or similar claims.
 
 ## Local setup
 
@@ -74,7 +84,7 @@ cp .env.example .env
 uvicorn app:app --reload --port 8000
 ```
 
-Place the **actual trained YOLO weights** at the configured `MODEL_PATH`. The repository does not include model weights and does not claim fabricated accuracy. The model's class names should include `pothole` (or configure `POTHOLE_CLASSES`).
+The default configuration downloads the selected pothole model automatically. For an offline/preloaded deployment, put the model at `MODEL_PATH` and optionally configure `MODEL_SHA256`.
 
 ## Authority access
 
@@ -93,6 +103,6 @@ Public registration always creates a normal `user`. To grant authority access fo
 
 ## Production checklist
 
-Before deployment, configure a durable S3-compatible bucket/CDN, MongoDB Atlas, a strong JWT secret, CORS origin, and a trained YOLO model. Do not commit secrets or model weights.
+Before deployment, configure a durable S3-compatible bucket/CDN, MongoDB Atlas, a strong JWT secret, CORS origin, and a pinned/preloaded YOLO model. Do not commit secrets or model weights.
 
-Model performance must be measured on the project's actual labeled dataset before publishing accuracy, precision, recall, mAP, or similar claims.
+Also configure `AI_SERVICE_URL`, `MODEL_PATH`, `MODEL_URL`, `MODEL_SHA256` (recommended for a fixed model), `CONFIDENCE_THRESHOLD`, `POTHOLE_CLASSES`, and `MAX_IMAGE_BYTES` as appropriate for the deployment.
