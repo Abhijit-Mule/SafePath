@@ -86,6 +86,27 @@ uvicorn app:app --reload --port 8000
 
 The default configuration downloads the selected pothole model automatically. For an offline/preloaded deployment, put the model at `MODEL_PATH` and optionally configure `MODEL_SHA256`.
 
+## Containerized deployment
+
+The repository includes production-oriented Dockerfiles for the client, API, and AI service plus a Docker Compose stack for local end-to-end testing.
+
+```bash
+# Linux/macOS
+export JWT_SECRET="replace-with-a-long-random-secret"
+docker compose up --build
+```
+
+On Windows PowerShell:
+
+```powershell
+$env:JWT_SECRET="replace-with-a-long-random-secret"
+docker compose up --build
+```
+
+The Compose stack starts MongoDB, MinIO object storage, the Python AI service, the Node API, and the React/Nginx client. Open `http://localhost` after the containers are healthy. The first AI inference downloads the model into a persistent Docker volume, so the model is not committed to Git.
+
+For cloud deployment, replace the Compose MongoDB/MinIO services with managed MongoDB Atlas and a durable S3-compatible provider, then configure the environment variables for the deployed services.
+
 ## Authority access
 
 Public registration always creates a normal `user`. To grant authority access for the academic deployment, promote a trusted account's `role` to `authority` directly in MongoDB. Never expose an authority role selector in public registration.
@@ -106,3 +127,5 @@ Public registration always creates a normal `user`. To grant authority access fo
 Before deployment, configure a durable S3-compatible bucket/CDN, MongoDB Atlas, a strong JWT secret, CORS origin, and a pinned/preloaded YOLO model. Do not commit secrets or model weights.
 
 Also configure `AI_SERVICE_URL`, `MODEL_PATH`, `MODEL_URL`, `MODEL_SHA256` (recommended for a fixed model), `CONFIDENCE_THRESHOLD`, `POTHOLE_CLASSES`, and `MAX_IMAGE_BYTES` as appropriate for the deployment.
+
+SafePath's own accuracy metrics should only be reported after evaluation on the project's labeled test dataset.
