@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 
 const reportSchema = new mongoose.Schema({
-  reporter: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  reporter: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   imageUrl: { type: String, required: true, trim: true },
   location: {
     lat: { type: Number, required: true, min: -90, max: 90 },
@@ -19,6 +19,7 @@ const reportSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 reportSchema.index({ createdAt: -1 });
+reportSchema.index({ status: 1, createdAt: -1 });
 reportSchema.index({ 'location.lat': 1, 'location.lng': 1 });
 
 export default mongoose.model('Report', reportSchema);
