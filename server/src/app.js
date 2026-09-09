@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.routes.js';
 import reportRoutes from './routes/report.routes.js';
 
@@ -9,13 +11,17 @@ const allowedOrigins = process.env.CLIENT_ORIGIN
   : true;
 
 app.disable('x-powered-by');
+app.use(helmet());
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 30, standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Too many authentication attempts. Please try again later.' } });
+const reportLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 60, standardHeaders: 'draft-8', legacyHeaders: false, message: { message: 'Too many report requests. Please try again later.' } });
+
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', service: 'safepath-api' }));
-app.use('/api/auth', authRoutes);
-app.use('/api/reports', reportRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/reports', reportLimiter, reportRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
