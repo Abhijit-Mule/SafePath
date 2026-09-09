@@ -48,6 +48,17 @@ export async function createReport(req, res, next) {
   } catch (err) { next(err); }
 }
 
+export async function updateReportStatus(req, res, next) {
+  try {
+    const allowed = ['reported', 'verified', 'resolved'];
+    const { status } = req.body;
+    if (!allowed.includes(status)) return res.status(400).json({ message: 'Invalid report status' });
+    const report = await Report.findByIdAndUpdate(req.params.id, { status }, { new: true, runValidators: true }).populate('reporter', 'name');
+    if (!report) return res.status(404).json({ message: 'Report not found' });
+    res.json(report);
+  } catch (err) { next(err); }
+}
+
 export async function dashboardStats(req, res, next) {
   try {
     const [total, reported, verified, resolved] = await Promise.all([
