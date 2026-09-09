@@ -22,7 +22,7 @@ jobs:
       - run: npm install
       - run: npm run build
 
-  server-check:
+  server-test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -37,3 +37,16 @@ jobs:
       - run: npm install
       - run: node --check src/server.js
       - run: node --check src/app.js
+      - run: npm test
+
+  ai-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m py_compile app.py
