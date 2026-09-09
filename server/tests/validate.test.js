@@ -65,7 +65,7 @@ test('validateObjectId rejects malformed report ids', () => {
   assert.equal(res.body.message, 'Invalid report id');
 });
 
-test('Report schema rejects coordinates outside geographic bounds', async () => {
+test('Report schema rejects coordinates outside geographic bounds', () => {
   const report = new Report({
     reporter: new mongoose.Types.ObjectId(),
     imageUrl: 'https://example.com/report.jpg',
@@ -74,7 +74,7 @@ test('Report schema rejects coordinates outside geographic bounds', async () => 
   const error = report.validateSync();
 
   assert.ok(error);
-  assert.match(error.errors['location.lat'].message, /less than or equal to 90/);
+  assert.match(error.errors['location.lat'].message, /maximum allowed value \(90\)/);
 });
 
 test('auth accepts a valid bearer token', () => {
@@ -85,7 +85,8 @@ test('auth accepts a valid bearer token', () => {
   const res = responseMock();
   let called = false;
   auth(req, res, () => { called = true; });
-  process.env.JWT_SECRET = original;
+  if (original === undefined) delete process.env.JWT_SECRET;
+  else process.env.JWT_SECRET = original;
 
   assert.equal(called, true);
   assert.equal(req.user.role, 'user');
