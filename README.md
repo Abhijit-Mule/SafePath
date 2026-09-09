@@ -2,15 +2,16 @@
 
 **AI-Based Road Condition Analysis and Alert System**
 
-SafePath is an academic project for reporting and analyzing road potholes using image-based AI detection, geolocation, and a public reporting dashboard.
+SafePath is an academic project for reporting and analyzing road potholes using image-based AI detection, geolocation, and an authority workflow.
 
 ## Architecture
 
-- **Client:** React + Vite
+- **Client:** React + Vite + Leaflet
 - **API:** Node.js + Express
 - **Database:** MongoDB / MongoDB Atlas
-- **AI service:** Python + FastAPI + YOLOv8-compatible inference
-- **Maps:** Leaflet + OpenStreetMap
+- **Image storage:** S3-compatible object storage (AWS S3, Cloudflare R2, MinIO, etc.)
+- **AI service:** Python + FastAPI + Ultralytics YOLO
+- **Maps:** OpenStreetMap
 - **Authentication:** JWT
 
 ```text
@@ -19,48 +20,29 @@ React Client
      v
 Node/Express API ------> MongoDB Atlas
      |
+     +-----------------> S3-compatible object storage
+     |
      v
-Python AI Service -----> YOLO model
+Python AI Service -----> trained YOLO pothole model
 ```
 
 ## Features
 
 - User registration and login
 - JWT-protected report creation
-- Pothole image upload
-- GPS coordinates and interactive Leaflet map
-- Status filtering: reported / verified / resolved
-- Public report history and image viewing
-- Authority dashboard with live statistics
-- Authority-only report status management
-- AI detection through a separate inference service
-- CORS and request validation
-
-## Authority workflow
-
-New accounts are created with the `user` role. Public registration cannot create an authority account. To create an authority for the academic/demo environment, promote the account directly in MongoDB:
-
-```js
-db.users.updateOne(
-  { email: "authority@example.com" },
-  { $set: { role: "authority" } }
-)
-```
-
-After promotion, sign out and sign in again so the new JWT contains the authority role. Authority users can move reports between `reported`, `verified`, and `resolved`.
-
-## Project structure
-
-```text
-SafePath/
-├── client/       # React frontend + Leaflet map
-├── server/       # Node/Express REST API
-└── ai-service/   # Python/FastAPI inference service
-```
+- JPEG/PNG/WebP image validation with an 8 MB limit
+- GPS coordinate and address validation
+- Production object storage for uploaded images
+- Real YOLO pothole inference through a separate service
+- Configurable confidence threshold and pothole class names
+- Public report feed and interactive map
+- Authority-only dashboard statistics and status updates
+- Report lifecycle: `reported` → `verified` → `resolved`
+- Automated client, API, and AI CI checks
 
 ## Local setup
 
-### 1. API
+### API
 
 ```bash
 cd server
@@ -69,7 +51,9 @@ cp .env.example .env
 npm run dev
 ```
 
-### 2. Client
+Configure MongoDB, JWT, the AI service URL, and an S3-compatible bucket in `.env`.
+
+### Client
 
 ```bash
 cd client
@@ -78,7 +62,7 @@ cp .env.example .env
 npm run dev
 ```
 
-### 3. AI service
+### AI service
 
 ```bash
 cd ai-service
@@ -90,11 +74,11 @@ cp .env.example .env
 uvicorn app:app --reload --port 8000
 ```
 
-The AI service deliberately does not ship model weights. Put a trained YOLO weights file at the configured model path, or enable the explicitly labeled demo mode for UI development. No fabricated detection accuracy is claimed by this repository.
+Place the **actual trained YOLO weights** at the configured `MODEL_PATH`. The repository does not include model weights and does not claim fabricated accuracy. The model's class names should include `pothole` (or configure `POTHOLE_CLASSES`).
 
-## Environment variables
+## Authority access
 
-See each `.env.example` file. Never commit real credentials, JWT secrets, MongoDB credentials, or model weights.
+Public registration always creates a normal `user`. To grant authority access for the academic deployment, promote a trusted account's `role` to `authority` directly in MongoDB. Never expose an authority role selector in public registration.
 
 ## API endpoints
 
@@ -102,15 +86,13 @@ See each `.env.example` file. Never commit real credentials, JWT secrets, MongoD
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `GET /api/reports`
-- `POST /api/reports` (JWT + image)
+- `POST /api/reports` — JWT + image
 - `GET /api/reports/:id`
-- `GET /api/reports/dashboard/stats` (authority JWT)
-- `PATCH /api/reports/:id/status` (authority JWT)
+- `GET /api/reports/dashboard/stats` — authority only
+- `PATCH /api/reports/:id/status` — authority only
 
-## Production note
+## Production checklist
 
-The current upload implementation stores images on the API filesystem. Before production deployment on ephemeral/serverless infrastructure, move image storage to durable object storage such as S3-compatible storage or Cloudinary and keep only the public asset URL in MongoDB.
+Before deployment, configure a durable S3-compatible bucket/CDN, MongoDB Atlas, a strong JWT secret, CORS origin, and a trained YOLO model. Do not commit secrets or model weights.
 
-## Academic note
-
-This repository is structured as a working foundation for the SafePath academic project. Model performance must be reported only after running evaluation on the project's actual dataset.
+Model performance must be measured on the project's actual labeled dataset before publishing accuracy, precision, recall, mAP, or similar claims.
